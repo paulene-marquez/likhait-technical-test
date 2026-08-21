@@ -2,11 +2,12 @@
  * Form component for adding/editing expenses
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { ExpenseFormData } from "../types";
-import { EXPENSE_CATEGORIES } from "../constants/categories";
 import { TextField, SelectBox, Button } from "../vibes";
 import { useExpenseForm } from "../hooks/useExpenseForm";
+import { useCategories } from "../hooks/useCategories";
+import { CategoryModal } from "./CategoryModal";
 
 interface ExpenseFormProps {
   initialData?: Partial<ExpenseFormData>;
@@ -22,27 +23,35 @@ export function ExpenseForm({
   submitLabel = "Add Expense",
 }: ExpenseFormProps) {
   const { formData, errors, isSubmitting, handleChange, handleSubmit } =
-    useExpenseForm({
-      initialData,
-      onSubmit,
-    });
+    useExpenseForm({ initialData, onSubmit });
+  const { categories, addCategory } = useCategories();
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   const formStyle: React.CSSProperties = {
     display: "flex",
     flexDirection: "column",
     gap: "1rem",
   };
-
   const buttonGroupStyle: React.CSSProperties = {
     display: "flex",
     gap: "0.5rem",
     marginTop: "0.5rem",
   };
+  const categoryFieldStyle: React.CSSProperties = {
+    display: "flex",
+    gap: "0.5rem",
+    alignItems: "flex-end",
+  };
 
-  const categoryOptions = EXPENSE_CATEGORIES.map((category) => ({
-    value: category,
-    label: category,
+  const categoryOptions = categories.map((category) => ({
+    value: category.name,
+    label: category.name,
   }));
+
+  const handleAddCategory = async (name: string) => {
+    const newCategory = await addCategory(name);
+    handleChange("category", newCategory.name);
+  };
 
   return (
     <form onSubmit={handleSubmit} style={formStyle}>
@@ -57,7 +66,6 @@ export function ExpenseForm({
         fullWidth
         required
       />
-
       <TextField
         label="Description"
         type="text"
@@ -68,17 +76,26 @@ export function ExpenseForm({
         fullWidth
         required
       />
-
-      <SelectBox
-        label="Category"
-        options={categoryOptions}
-        value={formData.category}
-        onChange={(e) => handleChange("category", e.target.value)}
-        error={errors.category}
-        fullWidth
-        required
-      />
-
+      <div style={categoryFieldStyle}>
+        <div style={{ flex: 1 }}>
+          <SelectBox
+            label="Category"
+            options={categoryOptions}
+            value={formData.category}
+            onChange={(e) => handleChange("category", e.target.value)}
+            error={errors.category}
+            fullWidth
+            required
+          />
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setIsCategoryModalOpen(true)}
+        >
+          + Add Category
+        </Button>
+      </div>
       <TextField
         label="Date"
         type="date"
@@ -88,27 +105,21 @@ export function ExpenseForm({
         fullWidth
         required
       />
-
       <div style={buttonGroupStyle}>
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={isSubmitting}
-          fullWidth
-        >
+        <Button type="submit" variant="primary" disabled={isSubmitting} fullWidth>
           {isSubmitting ? "Submitting..." : submitLabel}
         </Button>
         {onCancel && (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
         )}
       </div>
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        onAdd={handleAddCategory}
+      />
     </form>
   );
 }
